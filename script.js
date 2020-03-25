@@ -7,13 +7,14 @@ const cfg = {
     ringsCount: 10
 };
 
-let cw, ch, cx, cy, ph;
+let cw, ch, cx, cy, ph, pw;
 function resize() {
     cw = cnv.width = innerWidth;
     ch = cnv.height = innerHeight;
     cx = cw * 0.5;
     cy = ch * 0.5;
     ph = cy * 0.4;
+    pw = cx * 0.4;
 }
 resize();
 window.addEventListener(`resize`, resize);
@@ -34,17 +35,29 @@ class Orb {
         let cos = Math.cos(radian);
         let sin = Math.sin(radian);
 
-        let x = cx + cos * (ph + this.radius);
-        let y = cy + sin * (ph + this.radius);
+        let offsetX = cos * pw * this.impact;
+        let offsetY = sin * pw * this.impact;
+
+        let x = cx + cos * (ph + this.radius) + offsetX;
+        let y = cy + sin * (ph + this.radius) - offsetY;
+
+        let distToC = Math.hypot(x - cx, y - cy);
 
         let optic = sin * this.size * this.impact * 0.7;
 
         let size = this.size + optic;
 
-        ctx.fillStyle = `red`;
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, 2 * Math.PI);
-        ctx.fill();
+        let h = this.angle;
+        let s = 100;
+        let l = (1 - Math.sin(this.impact * Math.PI)) * 90 + 10;
+        let color = `hsl(${h}, ${s}%, ${l}%)`;
+
+        if (distToC > ph - 1 || sin > 0) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, 2 * Math.PI);
+            ctx.fill();
+        }
 
         this.angle = (this.angle + this.velocity) % 360;
     }
@@ -60,10 +73,11 @@ createStardust();
 
 function loop() {
     requestAnimationFrame(loop);
-
+    ctx.globalCompositeOperation = `normal`;
     ctx.fillStyle = `rgb(22,22,22)`; // Очищает холст
     ctx.fillRect(0, 0, cw, ch);
 
+    ctx.globalCompositeOperation = `lighter`;
     orbsList.map(e => e.refresh()); // Заново заполняет
 }
 loop();
