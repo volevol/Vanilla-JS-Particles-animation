@@ -7,6 +7,13 @@ const cfg = {
     ringsCount: 10
 };
 
+let mx = 0,
+    my = 0;
+cnv.addEventListener(`mousemove`, e => {
+    mx = e.clientX - cnv.getBoundingClientRect().left;
+    my = e.clientY - cnv.getBoundingClientRect().top;
+});
+
 let cw, ch, cx, cy, ph, pw;
 function resize() {
     cw = cnv.width = innerWidth;
@@ -26,7 +33,8 @@ class Orb {
         this.radius =
             (((Math.random() * cfg.ringsCount) | 0) * ph) / cfg.ringsCount;
         this.impact = this.radius / ph;
-        this.velocity = cfg.minVelocity + Math.random() * cfg.minVelocity;
+        this.velocity =
+            cfg.minVelocity + Math.random() * cfg.minVelocity + this.impact;
     }
 
     refresh() {
@@ -38,14 +46,21 @@ class Orb {
         let offsetX = cos * pw * this.impact;
         let offsetY = sin * pw * this.impact;
 
+        let paralaxX = (mx / cw) * 2 - 1;
+        let paralaxY = my / ch;
         let x = cx + cos * (ph + this.radius) + offsetX;
-        let y = cy + sin * (ph + this.radius) - offsetY;
+        let y =
+            cy +
+            sin * (ph + this.radius) -
+            offsetY * paralaxY -
+            paralaxX * offsetX;
 
         let distToC = Math.hypot(x - cx, y - cy);
+        let distToM = Math.hypot(x - mx, y - my);
 
         let optic = sin * this.size * this.impact * 0.7;
-
-        let size = this.size + optic;
+        let mEffect = distToM <= 50 ? (1 - distToM / 50) * 25 : 0;
+        let size = this.size + optic + mEffect;
 
         let h = this.angle;
         let s = 100;
@@ -53,13 +68,13 @@ class Orb {
         let color = `hsl(${h}, ${s}%, ${l}%)`;
 
         if (distToC > ph - 1 || sin > 0) {
-            ctx.fillStyle = color;
+            ctx.strokeStyle = ctx.fillStyle = color;
             ctx.beginPath();
             ctx.arc(x, y, size, 0, 2 * Math.PI);
-            ctx.fill();
+            distToM <= 50 ? ctx.stroke() : ctx.fill();
         }
 
-        this.angle = (this.angle + this.velocity) % 360;
+        this.angle = (this.angle - this.velocity) % 360;
     }
 }
 
@@ -71,10 +86,24 @@ function createStardust() {
 }
 createStardust();
 
+let bg1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, cx);
+bg1.addColorStop(0, `rgb(10,10,10)`);
+bg1.addColorStop(0.5, `rgb(10,10,20)`);
+bg1.addColorStop(1, `rgb(30, 10, 40)`);
+
+let bg2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, cx);
+bg2.addColorStop(0, `rgb(255, 255, 255)`);
+bg2.addColorStop(0.15, `rgb(255, 255, 255)`);
+bg2.addColorStop(0.16, `rgb(255, 200, 0)`);
+bg2.addColorStop(0.23, `rgb(255, 0, 0)`);
+bg2.addColorStop(0.45, `rgb(255, 0, 25)`);
+bg2.addColorStop(0.85, `rgb(9, 9, 25)`);
+bg2.addColorStop(1, `rgb(0, 0, 20)`);
+
 function loop() {
     requestAnimationFrame(loop);
     ctx.globalCompositeOperation = `normal`;
-    ctx.fillStyle = `rgb(22,22,22)`; // Очищает холст
+    ctx.fillStyle = bg2; // Очищает холст
     ctx.fillRect(0, 0, cw, ch);
 
     ctx.globalCompositeOperation = `lighter`;
